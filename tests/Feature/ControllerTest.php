@@ -20,7 +20,7 @@ class ControllerTest extends TestCase
         $response = $this->postJson('api/genre', [
             "name" => "Gênero Teste"
         ]);
-        $response->assertStatus(201);
+        $response->assertStatus(200);
         $_SESSION['genre_id_test'] = $response['id'];
     }
 
@@ -32,7 +32,7 @@ class ControllerTest extends TestCase
         $response = $this->postJson('api/streaming', [
             "name" => "Streaming Teste"
         ]);
-        $response->assertStatus(201);
+        $response->assertStatus(200);
         $_SESSION['streaming_id_test'] = $response['id'];
     }
 
@@ -44,7 +44,7 @@ class ControllerTest extends TestCase
         $response = $this->postJson('api/user', [
             "name" => "Usuário Teste"
         ]);
-        $response->assertStatus(201);
+        $response->assertStatus(200);
         $_SESSION['user_id_test'] = $response['id'];
     }
 
@@ -54,12 +54,12 @@ class ControllerTest extends TestCase
     public function test_criarMovie_retornaOk_quandoPassaOsDados()
     {
         $response = $this->postJson('api/movies', [
-            "title" => "Filme titulo"
+            "title" => "Filme titulo",
             "release_month" => "12",
             "release_year" => "2023",
             "genre_id" => $_SESSION['genre_id_test']
         ]);
-        $response->assertStatus(201);
+        $response->assertStatus(200);
         $_SESSION['movie_id_test'] = $response['id'];
     }
 
@@ -78,7 +78,7 @@ class ControllerTest extends TestCase
     public function test_buscarStreaming_retornaOk_quandoPassaOsDados()
     {
         $response = $this->getJson('api/streaming');
-        $response->assertStatus(201);
+        $response->assertStatus(200);
     }
 
     /**
@@ -87,7 +87,7 @@ class ControllerTest extends TestCase
     public function test_buscarUser_retornaOk_quandoPassaOsDados()
     {
         $response = $this->getJson('api/user');
-        $response->assertStatus(201);
+        $response->assertStatus(200);
     }
 
     /**
@@ -96,6 +96,6 @@ class ControllerTest extends TestCase
     public function test_buscarMovie_retornaOk_quandoPassaOsDados()
     {
         $response = $this->getJson('api/movies');
-        $response->assertStatus(201);
+        $response->assertStatus(200);
     }
 }
