@@ -11,7 +11,10 @@ use App\Models\User;
 use App\Models\Streaming;
 
 class ControllerTest extends TestCase
-{
+{   
+
+    use RefreshDatabase;
+
    /**
     * @return void
     */
@@ -97,5 +100,157 @@ class ControllerTest extends TestCase
     {
         $response = $this->getJson('api/movies');
         $response->assertStatus(200);
+    }
+
+    /**
+     * @return void
+     */
+    public function testRateMovie()
+    {
+        // Criar um usuário e um filme para testar
+        $user = factory(User::class)->create();
+        $movie = factory(Movie::class)->create();
+
+        $response = $this->post("/movies/{$movie->id}/rate", [
+            'user_id' => $user->id,
+            'rating' => 4,
+            'comment' => 'Ótimo filme!',
+        ]);
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('assessments', [
+            'user_id' => $user->id,
+            'rating' => 4,
+            'comment' => 'Ótimo filme!',
+        ]);
+    }
+
+    /**
+     * @return void
+     */
+    public function testAssociateStreamings()
+    {
+        // Criar um filme e algumas plataformas de streaming
+        $movie = factory(Movie::class)->create();
+        $streamings = factory(Streaming::class, 3)->create();
+
+        
+        $response = $this->post("/movies/{$movie->id}/associate-streamings", [
+            'streaming_id' => $streamings->pluck('id')->toArray(),
+        ]);
+        $response->assertStatus(200);
+        foreach ($streamings as $streaming) {
+            $this->assertDatabaseHas('movie_streaming', [
+                'movie_id' => $movie->id,
+                'streaming_id' => $streaming->id,
+            ]);
+        }
+    }
+
+    /**
+     * @return void
+     */
+    public function testStreamingCount()
+    {
+        // Criar um filme e algumas plataformas de streaming associadas
+        $movie = factory(Movie::class)->create();
+        $streamings = factory(Streaming::class, 3)->create();
+        $movie->streamings()->sync($streamings->pluck('id')->toArray());
+
+        $response = $this->get("/movies/{$movie->id}/streaming-count");
+        $response->assertStatus(200);
+        $responseData = $response->json();
+        $this->assertEquals(count($streamings), $responseData['streaming_count']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testAverageRating()
+    {
+        // Criar alguns filmes com avaliações
+        $movies = factory(Movie::class, 3)->create();
+        $movies->each(function ($movie) {
+            factory(Assessment::class, 5)->create(['movie_id' => $movie->id]);
+        });
+
+        $response = $this->get('/average-rating');
+        $response->assertStatus(200);
+        $responseData = $response->json();
+        foreach ($responseData as $movieData) {
+            $this->assertArrayHasKey('movie_id', $movieData);
+            $this->assertArrayHasKey('title', $movieData);
+            $this->assertArrayHasKey('average_rating', $movieData);
+        }
+    }
+
+    /**
+     * @return void
+     */
+    public function testFindMoviesByRating()
+    {
+        // Criar alguns filmes com avaliações variadas
+        $movies = factory(Movie::class, 3)->create();
+        $movies->each(function ($movie) {
+            factory(Assessment::class, 5)->create(['movie_id' => $movie->id]);
+        });
+
+        $response = $this->post('/find-movies-by-rating', [
+            'min_rating' => 3,
+            'max_rating' => 4,
+        ]);
+        $response->assertStatus(200);
+        $responseData = $response->json();
+        foreach ($responseData as $movie) {
+            $this->assertTrue($movie['assessment']->avg('rating') >= 3);
+            $this->assertTrue($movie['assessment']->avg('rating') <= 4);
+        }
+    }
+
+    /**
+     * @return void
+     */
+    public function testMoviesByYear()
+    {
+        // Criar alguns filmes com anos de lançamento diferentes
+        $movies = factory(Movie::class, 3)->create([
+            'release_year' => now()->year,
+        ]);
+        $movies = factory(Movie::class, 2)->create([
+            'release_year' => now()->year - 1,
+        ]);
+
+        $response = $this->get('/movies-by-year');
+        $response->assertStatus(200);
+        $responseData = $response->json();
+        foreach ($responseData as $yearData) {
+            $this->assertArrayHasKey('year', $yearData);
+            $this->assertArrayHasKey('movie_count', $yearData);
+        }
+        $this->assertEquals($movies->countBy('release_year')->toArray(), collect($responseData)->pluck('movie_count')->toArray());
+    }
+
+    /**
+     * @return void
+     */
+    public function testAverageRatingsByGenreAndYear()
+    {
+        // Criar alguns filmes com avaliações e diferentes gêneros e anos
+        $genres = factory(Genre::class, 3)->create();
+        $movies = factory(Movie::class, 6)->create([
+            'genre_id' => $genres->random()->id,
+        ]);
+        $movies->each(function ($movie) {
+            factory(Assessment::class, rand(1, 5))->create(['movie_id' => $movie->id]);
+        });
+
+        $response = $this->get('/average-ratings-by-genre-and-year');
+        $response->assertStatus(200);
+        $responseData = $response->json();
+        foreach ($responseData as $data) {
+            $this->assertArrayHasKey('genre', $data);
+            $this->assertArrayHasKey('release_month', $data);
+            $this->assertArrayHasKey('release_year', $data);
+            $this->assertArrayHasKey('average_rating', $data);
+        }
     }
 }

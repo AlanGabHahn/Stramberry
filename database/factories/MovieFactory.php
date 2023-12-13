@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
  */
-class UserFactory extends Factory
+class MovieFactory extends Factory
 {
     /**
      * The current password being used by the factory.
@@ -22,9 +22,13 @@ class UserFactory extends Factory
      * @return array<string, mixed>
      */
     public function definition(): array
-    {
+    {   
+        $genre = Genre::first();
         return [
-            'name' => fake()->name(),
+            'title' => fake()->name(),
+            'release_month' => 12,
+            'release_year' => 2023,
+            'genre_id' => $genre->id 
         ];
     }
 }
