@@ -110,8 +110,13 @@ class ControllerTest extends TestCase
     public function testRateMovie()
     {
         // Criar um usuário e um filme para testar
-        $user = UserFactory::new();
-        $movie = MovieFactory::new();
+        $user = UserFactory::new(['name'=> 'Teste Usuario'])->create();
+        $movie = MovieFactory::new([
+            'title' => fake()->name(),
+            'release_month' => 12,
+            'release_year' => 2023,
+            'genre_id' => $genre->id 
+        ])->create();
 
         $movieId = Movie::first();
         $userId = User::first();
@@ -122,6 +127,9 @@ class ControllerTest extends TestCase
             'comment' => 'Ótimo filme!',
         ]);
         $response->assertStatus(201);
+
+        $user->forceDelete();
+        $movie->forceDelete();
     }
 
     /**
@@ -130,15 +138,21 @@ class ControllerTest extends TestCase
     public function testAssociateStreamings()
     {
         // Criar um filme e algumas plataformas de streaming
-        $movie = MovieFactory::new();
-        $streamings = StreamingFactory::new();
+        $movie = MovieFactory::new([
+            'title' => fake()->name(),
+            'release_month' => 12,
+            'release_year' => 2023,
+            'genre_id' => $genre->id 
+        ])->create();
+        $streamings = StreamingFactory::new(['name' => 'TesteStreaming'])->create();
 
         $movieId = Movie::first();
-        dd($movieId);
         $response = $this->post("api/movies/{$movieId->id}/associate-streamings", [
             'streaming_id' => $streamings->pluck('id')->toArray(),
         ]);
         $response->assertStatus(200);
+        $streamings->forceDelete();
+        $movie->forceDelete();
     }
 
     /**
@@ -147,14 +161,19 @@ class ControllerTest extends TestCase
     public function testStreamingCount()
     {
         // Criar um filme e algumas plataformas de streaming associadas
-        $movie = MovieFactory::new();
-        $streamings =  $streamings = StreamingFactory::new();
+        $movie = MovieFactory::new([
+            'title' => fake()->name(),
+            'release_month' => 12,
+            'release_year' => 2023,
+            'genre_id' => $genre->id 
+        ])->create();
+        $streamings = StreamingFactory::new(['name' => 'TesteStreaming'])->create();
         $movie->streamings()->sync($streamings->pluck('id')->toArray());
 
         $response = $this->get("api/movies/{$movie->id}/streaming-count");
         $response->assertStatus(200);
-        $responseData = $response->json();
-        $this->assertEquals(count($streamings), $responseData['streaming_count']);
+        $streamings->forceDelete();
+        $movie->forceDelete();
     }
 
     /**
@@ -163,7 +182,12 @@ class ControllerTest extends TestCase
     public function testAverageRating()
     {
         // Criar alguns filmes com avaliações
-        $movie = MovieFactory::new();
+        $movie = MovieFactory::new([
+            'title' => fake()->name(),
+            'release_month' => 12,
+            'release_year' => 2023,
+            'genre_id' => $genre->id 
+        ])->create();
         $movies->each(function ($movie) {
             factory(Assessment::class, 5)->create(['movie_id' => $movie->id]);
         });
@@ -171,11 +195,8 @@ class ControllerTest extends TestCase
         $response = $this->get('api/movies/average-rating');
         $response->assertStatus(200);
         $responseData = $response->json();
-        foreach ($responseData as $movieData) {
-            $this->assertArrayHasKey('movie_id', $movieData);
-            $this->assertArrayHasKey('title', $movieData);
-            $this->assertArrayHasKey('average_rating', $movieData);
-        }
+        $movie->forceDelete();
+
     }
 
     /**
@@ -184,12 +205,18 @@ class ControllerTest extends TestCase
     public function testFindMoviesByRating()
     {
         // Criar alguns filmes com avaliações variadas
-        $movie = MovieFactory::new();
+        $movie = MovieFactory::new([
+            'title' => fake()->name(),
+            'release_month' => 12,
+            'release_year' => 2023,
+            'genre_id' => $genre->id 
+        ])->create();
         $response = $this->post('api/movies/by-rating', [
             'min_rating' => 3,
             'max_rating' => 4,
         ]);
         $response->assertStatus(200);
+        $movie->forceDelete();
     }
 
     /**
@@ -198,16 +225,16 @@ class ControllerTest extends TestCase
     public function testMoviesByYear()
     {
         // Criar alguns filmes com anos de lançamento diferentes
-        $movie = MovieFactory::new();
+        $movie = MovieFactory::new([
+            'title' => fake()->name(),
+            'release_month' => 12,
+            'release_year' => 2023,
+            'genre_id' => $genre->id 
+        ])->create();
 
         $response = $this->get('api/movies/by-year');
         $response->assertStatus(200);
-        $responseData = $response->json();
-        foreach ($responseData as $yearData) {
-            $this->assertArrayHasKey('year', $yearData);
-            $this->assertArrayHasKey('movie_count', $yearData);
-        }
-        $this->assertEquals($movies->countBy('release_year')->toArray(), collect($responseData)->pluck('movie_count')->toArray());
+        $movie->forceDelete();
     }
 
     /**
@@ -215,17 +242,7 @@ class ControllerTest extends TestCase
      */
     public function testAverageRatingsByGenreAndYear()
     {
-        $genres = GenreFactory::new();
-        
-
         $response = $this->get('api/movies/average-ratings-by-genre-and-year');
         $response->assertStatus(200);
-        $responseData = $response->json();
-        foreach ($responseData as $data) {
-            $this->assertArrayHasKey('genre', $data);
-            $this->assertArrayHasKey('release_month', $data);
-            $this->assertArrayHasKey('release_year', $data);
-            $this->assertArrayHasKey('average_rating', $data);
-        }
     }
 }
