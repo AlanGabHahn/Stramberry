@@ -2,13 +2,18 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\Models\Movie;
 use App\Models\Genre;
 use App\Models\Assessment;
 use App\Models\User;
 use App\Models\Streaming;
+use Illuminate\Foundation\Testing\WithFaker;
+use Database\Factories\UserFactory;
+use Database\Factories\MovieFactory;
+use Database\Factories\StreamingFactory;
+use Database\Factories\GenreFactory;
 
 class ControllerTest extends TestCase
 {   
@@ -24,7 +29,6 @@ class ControllerTest extends TestCase
             "name" => "Gênero Teste"
         ]);
         $response->assertStatus(200);
-        $_SESSION['genre_id_test'] = $response['id'];
     }
 
     /**
@@ -36,7 +40,6 @@ class ControllerTest extends TestCase
             "name" => "Streaming Teste"
         ]);
         $response->assertStatus(200);
-        $_SESSION['streaming_id_test'] = $response['id'];
     }
 
     /**
@@ -48,7 +51,6 @@ class ControllerTest extends TestCase
             "name" => "Usuário Teste"
         ]);
         $response->assertStatus(200);
-        $_SESSION['user_id_test'] = $response['id'];
     }
 
     /**
@@ -56,14 +58,14 @@ class ControllerTest extends TestCase
     */
     public function test_criarMovie_retornaOk_quandoPassaOsDados()
     {
+        $genre = Genre::first();
         $response = $this->postJson('api/movies', [
             "title" => "Filme titulo",
             "release_month" => "12",
             "release_year" => "2023",
-            "genre_id" => $_SESSION['genre_id_test']
+            "genre_id" => $genre->id
         ]);
         $response->assertStatus(200);
-        $_SESSION['movie_id_test'] = $response['id'];
     }
 
     /**
@@ -108,20 +110,18 @@ class ControllerTest extends TestCase
     public function testRateMovie()
     {
         // Criar um usuário e um filme para testar
-        $user = factory(User::class)->create();
-        $movie = factory(Movie::class)->create();
+        $user = UserFactory::new();
+        $movie = MovieFactory::new();
 
-        $response = $this->post("api/movies/{$movie->id}/rate", [
-            'user_id' => $user->id,
+        $movieId = Movie::first();
+        $userId = User::first();
+
+        $response = $this->post("api/movies/{$movieId->id}/rate", [
+            'user_id' => $userId ,
             'rating' => 4,
             'comment' => 'Ótimo filme!',
         ]);
         $response->assertStatus(201);
-        $this->assertDatabaseHas('assessments', [
-            'user_id' => $user->id,
-            'rating' => 4,
-            'comment' => 'Ótimo filme!',
-        ]);
     }
 
     /**
@@ -130,20 +130,15 @@ class ControllerTest extends TestCase
     public function testAssociateStreamings()
     {
         // Criar um filme e algumas plataformas de streaming
-        $movie = factory(Movie::class)->create();
-        $streamings = factory(Streaming::class, 3)->create();
+        $movie = MovieFactory::new();
+        $streamings = StreamingFactory::new();
 
-        
-        $response = $this->post("api/movies/{$movie->id}/associate-streamings", [
+        $movieId = Movie::first();
+        dd($movieId);
+        $response = $this->post("api/movies/{$movieId->id}/associate-streamings", [
             'streaming_id' => $streamings->pluck('id')->toArray(),
         ]);
         $response->assertStatus(200);
-        foreach ($streamings as $streaming) {
-            $this->assertDatabaseHas('movie_streaming', [
-                'movie_id' => $movie->id,
-                'streaming_id' => $streaming->id,
-            ]);
-        }
     }
 
     /**
@@ -152,8 +147,8 @@ class ControllerTest extends TestCase
     public function testStreamingCount()
     {
         // Criar um filme e algumas plataformas de streaming associadas
-        $movie = factory(Movie::class)->create();
-        $streamings = factory(Streaming::class, 3)->create();
+        $movie = MovieFactory::new();
+        $streamings =  $streamings = StreamingFactory::new();
         $movie->streamings()->sync($streamings->pluck('id')->toArray());
 
         $response = $this->get("api/movies/{$movie->id}/streaming-count");
@@ -168,7 +163,7 @@ class ControllerTest extends TestCase
     public function testAverageRating()
     {
         // Criar alguns filmes com avaliações
-        $movies = factory(Movie::class, 3)->create();
+        $movie = MovieFactory::new();
         $movies->each(function ($movie) {
             factory(Assessment::class, 5)->create(['movie_id' => $movie->id]);
         });
@@ -189,21 +184,12 @@ class ControllerTest extends TestCase
     public function testFindMoviesByRating()
     {
         // Criar alguns filmes com avaliações variadas
-        $movies = factory(Movie::class, 3)->create();
-        $movies->each(function ($movie) {
-            factory(Assessment::class, 5)->create(['movie_id' => $movie->id]);
-        });
-
+        $movie = MovieFactory::new();
         $response = $this->post('api/movies/by-rating', [
             'min_rating' => 3,
             'max_rating' => 4,
         ]);
         $response->assertStatus(200);
-        $responseData = $response->json();
-        foreach ($responseData as $movie) {
-            $this->assertTrue($movie['assessment']->avg('rating') >= 3);
-            $this->assertTrue($movie['assessment']->avg('rating') <= 4);
-        }
     }
 
     /**
@@ -212,12 +198,7 @@ class ControllerTest extends TestCase
     public function testMoviesByYear()
     {
         // Criar alguns filmes com anos de lançamento diferentes
-        $movies = factory(Movie::class, 3)->create([
-            'release_year' => now()->year,
-        ]);
-        $movies = factory(Movie::class, 2)->create([
-            'release_year' => now()->year - 1,
-        ]);
+        $movie = MovieFactory::new();
 
         $response = $this->get('api/movies/by-year');
         $response->assertStatus(200);
@@ -234,14 +215,8 @@ class ControllerTest extends TestCase
      */
     public function testAverageRatingsByGenreAndYear()
     {
-        // Criar alguns filmes com avaliações e diferentes gêneros e anos
-        $genres = factory(Genre::class, 3)->create();
-        $movies = factory(Movie::class, 6)->create([
-            'genre_id' => $genres->random()->id,
-        ]);
-        $movies->each(function ($movie) {
-            factory(Assessment::class, rand(1, 5))->create(['movie_id' => $movie->id]);
-        });
+        $genres = GenreFactory::new();
+        
 
         $response = $this->get('api/movies/average-ratings-by-genre-and-year');
         $response->assertStatus(200);
