@@ -111,7 +111,7 @@ class ControllerTest extends TestCase
         $user = factory(User::class)->create();
         $movie = factory(Movie::class)->create();
 
-        $response = $this->post("/movies/{$movie->id}/rate", [
+        $response = $this->post("api/movies/{$movie->id}/rate", [
             'user_id' => $user->id,
             'rating' => 4,
             'comment' => 'Ótimo filme!',
@@ -134,7 +134,7 @@ class ControllerTest extends TestCase
         $streamings = factory(Streaming::class, 3)->create();
 
         
-        $response = $this->post("/movies/{$movie->id}/associate-streamings", [
+        $response = $this->post("api/movies/{$movie->id}/associate-streamings", [
             'streaming_id' => $streamings->pluck('id')->toArray(),
         ]);
         $response->assertStatus(200);
@@ -156,7 +156,7 @@ class ControllerTest extends TestCase
         $streamings = factory(Streaming::class, 3)->create();
         $movie->streamings()->sync($streamings->pluck('id')->toArray());
 
-        $response = $this->get("/movies/{$movie->id}/streaming-count");
+        $response = $this->get("api/movies/{$movie->id}/streaming-count");
         $response->assertStatus(200);
         $responseData = $response->json();
         $this->assertEquals(count($streamings), $responseData['streaming_count']);
@@ -173,7 +173,7 @@ class ControllerTest extends TestCase
             factory(Assessment::class, 5)->create(['movie_id' => $movie->id]);
         });
 
-        $response = $this->get('/average-rating');
+        $response = $this->get('api/movies/average-rating');
         $response->assertStatus(200);
         $responseData = $response->json();
         foreach ($responseData as $movieData) {
@@ -194,7 +194,7 @@ class ControllerTest extends TestCase
             factory(Assessment::class, 5)->create(['movie_id' => $movie->id]);
         });
 
-        $response = $this->post('/find-movies-by-rating', [
+        $response = $this->post('api/movies/by-rating', [
             'min_rating' => 3,
             'max_rating' => 4,
         ]);
@@ -219,7 +219,7 @@ class ControllerTest extends TestCase
             'release_year' => now()->year - 1,
         ]);
 
-        $response = $this->get('/movies-by-year');
+        $response = $this->get('api/movies/by-year');
         $response->assertStatus(200);
         $responseData = $response->json();
         foreach ($responseData as $yearData) {
@@ -243,7 +243,7 @@ class ControllerTest extends TestCase
             factory(Assessment::class, rand(1, 5))->create(['movie_id' => $movie->id]);
         });
 
-        $response = $this->get('/average-ratings-by-genre-and-year');
+        $response = $this->get('api/movies/average-ratings-by-genre-and-year');
         $response->assertStatus(200);
         $responseData = $response->json();
         foreach ($responseData as $data) {
