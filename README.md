@@ -17,11 +17,8 @@ Depois de ter feito download do projeto, e necessário também rodar os comandos
 ```
 composer install
 ```
-```
-npm install
-```
 
-*Também é necessário ter o composer, node e php instalados para funcionar corretamente*
+*Também é necessário ter o composer e php instalados para funcionar corretamente*
 
 É necessário criar um arquivo no root da aplicação com o nome ".env" e dentro dele ter as mesmas variáveis do ".env.example", porém as mais importantes são as abaixo: 
 
