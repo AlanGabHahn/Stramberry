@@ -5,6 +5,8 @@ namespace Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use App\Models\Movie;
+
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
@@ -12,9 +14,9 @@ use Illuminate\Support\Str;
 class MovieFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
+     * @var string
      */
-    protected static ?string $password;
+    protected $model = Movie::class;
 
     /**
      * Define the model's default state.
